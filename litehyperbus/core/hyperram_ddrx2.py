@@ -1,7 +1,10 @@
-# This file is Copyright (c) 2019 Antti Lukats <antti.lukats@gmail.com>
-# This file is Copyright (c) 2019 Florent Kermarrec <florent@enjoy-digital.fr>
-# This file is Copyright (c) 2020 Gregory Davill <greg.davill@gmail.com>
-# License: BSD
+#
+# This file is part of LiteHyperBus
+#
+# Copyright (c) 2019 Antti Lukats <antti.lukats@gmail.com>
+# Copyright (c) 2019 Florent Kermarrec <florent@enjoy-digital.fr>
+# Copyright (c) 2020 Gregory Davill <greg.davill@gmail.com>
+# SPDX-License-Identifier: BSD-2-Clause
 
 from migen import Module, Record, Signal, If, Cat, TSTriple, Instance, ClockSignal, ResetSignal
 from migen import  FSM, NextValue, NextState
@@ -61,16 +64,16 @@ class HyperRAMX2(Module):
             phy.dly_io.eq(self.dly_io),
             phy.dly_clk.eq(self.dly_clk),
         ]
-    
+
         # Drive rst_n, from internal signals ---------------------------------------------
         if hasattr(pads, "rst_n"):
             self.comb += pads.rst_n.eq(1)
-            
+
         self.comb += [
             phy.cs.eq(~cs),
             phy.clk_enable.eq(clk)
         ]
-        
+
         # Data In/Out Shift Registers -------------------------------------------------
         self.sync += [
             sr_out.eq(Cat(Signal(32), sr_out[:32])),
@@ -102,7 +105,7 @@ class HyperRAMX2(Module):
         fsm.act("LATENCY", NextValue(phy.dq.oe, 0), NextState("LATENCY-WAIT"))
 
         fsm.delayed_enter("LATENCY-WAIT", "READ-WRITE-SETUP", 3)
-        
+
         fsm.act("READ-WRITE-SETUP", NextValue(phy.dq.oe, self.bus.we), NextValue(phy.rwds.oe,self.bus.we), NextState("READ-WRITE"))
         fsm.act("READ-WRITE", NextState("READ-ACK"),
                 If(self.bus.we,
@@ -116,11 +119,11 @@ class HyperRAMX2(Module):
                     If(bus.cti == 0b010,
                         NextState("READ-WRITE"),
                 )))
-        
-        
-        fsm.act("READ-ACK", 
+
+
+        fsm.act("READ-ACK",
             NextValue(timeout_counter, timeout_counter + 1),
-            If(phy.rwds.i[3], 
+            If(phy.rwds.i[3],
                 NextValue(timeout_counter, 0),
                 bus.ack.eq(1),
                 If(bus.cti != 0b010,
@@ -128,12 +131,12 @@ class HyperRAMX2(Module):
             If(~self.bus.cyc | (timeout_counter > 20),
                 NextState("CLK-OFF")
             ))
-        
+
         fsm.act("CLK-OFF", NextValue(clk, 0), NextState("CLEANUP"))
         fsm.act("CLEANUP", NextValue(cs, 0), NextValue(phy.rwds.oe, 0), NextValue(phy.dq.oe, 0), NextState("HOLD-WAIT"))
         fsm.act("HOLD-WAIT", NextValue(sr_out, 0), NextValue(sr_rwds_out, 0), NextState("WAIT"))
-        fsm.delayed_enter("WAIT", "IDLE", 10) 
-        
+        fsm.delayed_enter("WAIT", "IDLE", 10)
+
         # Signals that can be an ILA for debugging
         self.dbg = [
             bus,

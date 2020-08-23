@@ -1,5 +1,8 @@
-# This file is Copyright (c) 2020 Gregory Davill <greg.davill@gmail.com>
-# License: BSD
+#
+# This file is part of LiteHyperBus
+#
+# Copyright (c) 2020 Gregory Davill <greg.davill@gmail.com>
+# SPDX-License-Identifier: BSD-2-Clause
 
 from migen import Module, Record, Signal, TSTriple, Instance, ClockSignal, ResetSignal
 
@@ -18,14 +21,14 @@ class HyperBusPHY(Module):
       - Not technically supported under diamond outside of DQS modes
       - Only available on Left/Right I/O banks
 
-    - PLL required to produce 2*sys_clk, then use CLKDIVF to create sys_clk 
+    - PLL required to produce 2*sys_clk, then use CLKDIVF to create sys_clk
 
     - Clocks
      - hr2x    : 2* sys_freq - I/O clock
      - hr      : sys_freq    - core clock
      - hr2x_90 : 2* sys_freq - phase shifted clock output to HyperRAM
      - hr_90   : sys_freq    - phase shifted clock for SCLK
-    
+
     """
     def add_tristate(self, pad):
         t = TSTriple(len(pad))
@@ -35,7 +38,7 @@ class HyperBusPHY(Module):
     def __init__(self, pads):
         def io_bus(n):
             return Record([("oe", 1),("i", n),("o", n)])
-        
+
         # # #
         self.clk_enable = Signal()
         self.cs = Signal()
@@ -43,7 +46,7 @@ class HyperBusPHY(Module):
         self.rwds = io_bus(4)
 
 
-        ## IO Delay shifting 
+        ## IO Delay shifting
         self.dly_io = delayf_pins()
         self.dly_clk = delayf_pins()
 
@@ -56,7 +59,7 @@ class HyperBusPHY(Module):
 
         self.specials += MultiReg(self.rwds.oe, rwds.oe, n=3)
         self.specials += MultiReg(self.dq.oe, dq.oe, n=3)
-        
+
         # mask off clock when no CS
         clk_en = Signal()
         self.comb += clk_en.eq(self.clk_enable & ~self.cs)
@@ -83,7 +86,7 @@ class HyperBusPHY(Module):
                     i_DIRECTION=self.dly_clk.direction,
                     o_Z=pads.clk_p)
         ]
-        
+
         self.specials += [
             Instance("ODDRX2F",
                 i_D3=~clk_en,
@@ -118,7 +121,7 @@ class HyperBusPHY(Module):
                     o_Q=dq.o[i]
                 )
             ]
-    
+
 
         # DQ_in
         for i in range(8):
@@ -143,7 +146,7 @@ class HyperBusPHY(Module):
                     i_DIRECTION=self.dly_io.direction,
                     o_Z=dq_in)
             ]
-        
+
         # RWDS_out
         self.specials += [
             Instance("ODDRX2F",
