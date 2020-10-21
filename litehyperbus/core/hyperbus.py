@@ -87,10 +87,10 @@ class HyperRAM(Module):
                     sr[:16].eq(0),
                     sr[16:].eq(self.bus.dat_w),
                     rwds.oe.eq(self.bus.we),
-                    rwds.o.eq(~bus.sel[0])]),
-            (2,    [rwds.o.eq(~bus.sel[1])]),              # Write/Read data byte: 2 clk
+                    rwds.o.eq(~bus.sel[3])]),
             (2,    [rwds.o.eq(~bus.sel[2])]),              # Write/Read data byte: 2 clk
-            (2,    [rwds.o.eq(~bus.sel[3])]),              # Write/Read data byte: 2 clk
+            (2,    [rwds.o.eq(~bus.sel[1])]),              # Write/Read data byte: 2 clk
+            (2,    [rwds.o.eq(~bus.sel[0])]),              # Write/Read data byte: 2 clk
             (2,    [cs.eq(0), rwds.oe.eq(0), dq.oe.eq(0)]),
             (1,    [bus.ack.eq(1)]),
             (1,    [bus.ack.eq(0)]),
