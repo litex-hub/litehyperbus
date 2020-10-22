@@ -64,13 +64,13 @@ class HyperBusPHY(Module):
         clkn = Signal()
         self.specials += [
             Instance("ODDRX2F",
+                i_SCLK = ClockSignal("hr_90"),
+                i_ECLK = ClockSignal("hr2x_90"),
+                i_RST  = ResetSignal("hr"),
                 i_D3   = clk_en,
                 i_D2   = 0,
                 i_D1   = clk_en,
                 i_D0   = 0,
-                i_SCLK = ClockSignal("hr_90"),
-                i_ECLK = ClockSignal("hr2x_90"),
-                i_RST  = ResetSignal("hr"),
                 o_Q    = clkp
             ),
             Instance("DELAYF",
@@ -86,13 +86,13 @@ class HyperBusPHY(Module):
 
         self.specials += [
             Instance("ODDRX2F",
+                i_SCLK = ClockSignal("hr_90"),
+                i_ECLK = ClockSignal("hr2x_90"),
+                i_RST  = ResetSignal("hr"),
                 i_D3   = ~clk_en,
                 i_D2   = 1,
                 i_D1   = ~clk_en,
                 i_D0   = 1,
-                i_SCLK = ClockSignal("hr_90"),
-                i_ECLK = ClockSignal("hr2x_90"),
-                i_RST  = ResetSignal("hr"),
                 o_Q    = clkn
             ),
             Instance("DELAYF",
@@ -109,13 +109,13 @@ class HyperBusPHY(Module):
         # DQ_out
         for i in range(8):
             self.specials += Instance("ODDRX2F",
+                i_SCLK = ClockSignal("hr"),
+                i_ECLK = ClockSignal("hr2x"),
+                i_RST  = ResetSignal("hr"),
                 i_D3   = self.dq.o[i],
                 i_D2   = self.dq.o[8+i],
                 i_D1   = self.dq.o[16+i],
                 i_D0   = self.dq.o[24+i],
-                i_SCLK = ClockSignal("hr"),
-                i_ECLK = ClockSignal("hr2x"),
-                i_RST  = ResetSignal("hr"),
                 o_Q    = dq.o[i]
             )
 
@@ -125,10 +125,10 @@ class HyperBusPHY(Module):
             dq_in = Signal()
             self.specials += [
                 Instance("IDDRX2F",
-                    i_D    = dq_in,
                     i_SCLK = ClockSignal("hr"),
                     i_ECLK = ClockSignal("hr2x"),
                     i_RST  = ResetSignal("hr"),
+                    i_D    = dq_in,
                     o_Q3   = self.dq.i[i],
                     o_Q2   = self.dq.i[i+8],
                     o_Q1   = self.dq.i[i+16],
@@ -148,13 +148,13 @@ class HyperBusPHY(Module):
         # RWDS_out
         self.specials += [
             Instance("ODDRX2F",
+                i_SCLK = ClockSignal("hr"),
+                i_ECLK = ClockSignal("hr2x"),
+                i_RST  = ResetSignal("hr"),
                 i_D3   = self.rwds.o[0],
                 i_D2   = self.rwds.o[1],
                 i_D1   = self.rwds.o[2],
                 i_D0   = self.rwds.o[3],
-                i_SCLK = ClockSignal("hr"),
-                i_ECLK = ClockSignal("hr2x"),
-                i_RST  = ResetSignal("hr"),
                 o_Q    = rwds.o
             )
         ]
@@ -163,10 +163,10 @@ class HyperBusPHY(Module):
         rwds_in = Signal()
         self.specials += [
             Instance("IDDRX2F",
-                i_D    = rwds_in,
                 i_SCLK = ClockSignal("hr"),
                 i_ECLK = ClockSignal("hr2x"),
                 i_RST  = ResetSignal("hr"),
+                i_D    = rwds_in,
                 o_Q3   = self.rwds.i[0],
                 o_Q2   = self.rwds.i[1],
                 o_Q1   = self.rwds.i[2],
