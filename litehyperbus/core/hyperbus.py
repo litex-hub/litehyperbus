@@ -21,7 +21,7 @@ class HyperRAM(Module):
     - FPGA vendor agnostic.
     - no setup/chip configuration (use default latency).
 
-    This core favrors portability and ease of use over performance.
+    This core favors portability and ease of use over performance.
     """
     def __init__(self, pads):
         self.pads = pads
