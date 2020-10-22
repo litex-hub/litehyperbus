@@ -11,7 +11,7 @@
 
 [> Intro
 --------
-LiteHyperBus provides a small footprint and configurable SPI core.
+LiteHyperBus provides a small footprint and configurable HyperBus core.
 
 LiteHyperBus is part of LiteX libraries whose aims are to lower entry level of
 complex FPGA cores by providing simple, elegant and efficient implementations of components used in
