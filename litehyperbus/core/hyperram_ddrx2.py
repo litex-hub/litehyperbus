@@ -133,6 +133,10 @@ class HyperRAMX2(Module):
                 If(bus.cti == 0b010,
                     NextState("READ-WRITE"),
                 )
+            ),
+            If(~self.bus.cyc, # Cycle ended
+                NextValue(clk, 0),
+                NextState("CLEANUP")
             )
         )
         fsm.act("READ-ACK",
@@ -142,8 +146,9 @@ class HyperRAMX2(Module):
                 bus.ack.eq(1),
                 If(bus.cti != 0b010,
                     NextValue(clk, 0),
-                    NextState("CLEANUP"))
-                ),
+                    NextState("CLEANUP")
+                )
+            ),
             If(~self.bus.cyc | (timeout_counter > 20),
                 NextState("CLK-OFF")
             )
