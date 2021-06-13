@@ -34,7 +34,7 @@ class HyperRAMX2(Module):
      - Handle variable latency writes
      - Add Litex automated tests
     """
-    def __init__(self, pads):
+    def __init__(self, pads, latency = 6):
         self.pads = pads
         self.bus  = bus = wishbone.Interface(adr_width=22)
 
@@ -114,7 +114,7 @@ class HyperRAMX2(Module):
             NextValue(phy.dq.oe, 0),
             NextState("LATENCY-WAIT")
         )
-        fsm.delayed_enter("LATENCY-WAIT", "READ-WRITE-SETUP", 3)
+        fsm.delayed_enter("LATENCY-WAIT", "READ-WRITE-SETUP", latency - 3)
         fsm.act("READ-WRITE-SETUP",
             NextValue(phy.dq.oe, self.bus.we),
             NextValue(phy.rwds.oe,self.bus.we),
