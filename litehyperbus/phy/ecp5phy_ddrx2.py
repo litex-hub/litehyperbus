@@ -60,51 +60,76 @@ class HyperBusPHY(Module):
         self.comb += clk_en.eq(self.clk_enable & ~self.cs)
 
         # Clk_out
-        clkp = Signal()
-        clkn = Signal()
-        self.specials += [
-            Instance("ODDRX2F",
-                i_SCLK = ClockSignal("hr_90"),
-                i_ECLK = ClockSignal("hr2x_90"),
-                i_RST  = ResetSignal("hr"),
-                i_D3   = clk_en,
-                i_D2   = 0,
-                i_D1   = clk_en,
-                i_D0   = 0,
-                o_Q    = clkp
-            ),
-            Instance("DELAYF",
-                p_DEL_MODE  = "USER_DEFINED",
-                p_DEL_VALUE = 0, # (25ps per tap)
-                i_A         = clkp,
-                i_LOADN     = self.dly_clk.loadn,
-                i_MOVE      = self.dly_clk.move,
-                i_DIRECTION = self.dly_clk.direction,
-                o_Z         = pads.clk_p
-            )
-        ]
+        if hasattr(pads, "clk"):
+            clk = Signal()
+            self.specials += [
+                Instance("ODDRX2F",
+                    i_SCLK = ClockSignal("hr_90"),
+                    i_ECLK = ClockSignal("hr2x_90"),
+                    i_RST  = ResetSignal("hr"),
+                    i_D3   = clk_en,
+                    i_D2   = 0,
+                    i_D1   = clk_en,
+                    i_D0   = 0,
+                    o_Q    = clk
+                ),
+                Instance("DELAYF",
+                    p_DEL_MODE  = "USER_DEFINED",
+                    p_DEL_VALUE = 0, # (25ps per tap)
+                    i_A         = clk,
+                    i_LOADN     = self.dly_clk.loadn,
+                    i_MOVE      = self.dly_clk.move,
+                    i_DIRECTION = self.dly_clk.direction,
+                    o_Z         = pads.clk
+                )
+            ]
 
-        self.specials += [
-            Instance("ODDRX2F",
-                i_SCLK = ClockSignal("hr_90"),
-                i_ECLK = ClockSignal("hr2x_90"),
-                i_RST  = ResetSignal("hr"),
-                i_D3   = ~clk_en,
-                i_D2   = 1,
-                i_D1   = ~clk_en,
-                i_D0   = 1,
-                o_Q    = clkn
-            ),
-            Instance("DELAYF",
-                p_DEL_MODE  = "USER_DEFINED",
-                p_DEL_VALUE = 0, # (25ps per tap)
-                i_A         = clkn,
-                i_LOADN     = self.dly_clk.loadn,
-                i_MOVE      = self.dly_clk.move,
-                i_DIRECTION = self.dly_clk.direction,
-                o_Z         = pads.clk_n
-            )
-        ]
+        else:
+            clkp = Signal()
+            clkn = Signal()
+            self.specials += [
+                Instance("ODDRX2F",
+                    i_SCLK = ClockSignal("hr_90"),
+                    i_ECLK = ClockSignal("hr2x_90"),
+                    i_RST  = ResetSignal("hr"),
+                    i_D3   = clk_en,
+                    i_D2   = 0,
+                    i_D1   = clk_en,
+                    i_D0   = 0,
+                    o_Q    = clkp
+                ),
+                Instance("DELAYF",
+                    p_DEL_MODE  = "USER_DEFINED",
+                    p_DEL_VALUE = 0, # (25ps per tap)
+                    i_A         = clkp,
+                    i_LOADN     = self.dly_clk.loadn,
+                    i_MOVE      = self.dly_clk.move,
+                    i_DIRECTION = self.dly_clk.direction,
+                    o_Z         = pads.clk_p
+                )
+            ]
+
+            self.specials += [
+                Instance("ODDRX2F",
+                    i_SCLK = ClockSignal("hr_90"),
+                    i_ECLK = ClockSignal("hr2x_90"),
+                    i_RST  = ResetSignal("hr"),
+                    i_D3   = ~clk_en,
+                    i_D2   = 1,
+                    i_D1   = ~clk_en,
+                    i_D0   = 1,
+                    o_Q    = clkn
+                ),
+                Instance("DELAYF",
+                    p_DEL_MODE  = "USER_DEFINED",
+                    p_DEL_VALUE = 0, # (25ps per tap)
+                    i_A         = clkn,
+                    i_LOADN     = self.dly_clk.loadn,
+                    i_MOVE      = self.dly_clk.move,
+                    i_DIRECTION = self.dly_clk.direction,
+                    o_Z         = pads.clk_n
+                )
+            ]
 
         # DQ_out
         for i in range(8):
