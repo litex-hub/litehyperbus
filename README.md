@@ -5,7 +5,7 @@
    /____/_/\__/\__/_//_/\_, / .__/\__/_/ /____/\_,_/___/
                        /___/_/
 
-      Copyright (c) 2020, LiteHyperBus Developers
+      Copyright (c) 2020-2021, LiteHyperBus Developers
 ```
 [![](https://github.com/litex-hub/litehyperbus/workflows/ci/badge.svg)](https://github.com/litex-hub/litehyperbus/actions) ![License](https://img.shields.io/badge/License-BSD%202--Clause-orange.svg)
 
