@@ -23,7 +23,7 @@ class HyperRAM(Module):
 
     This core favors portability and ease of use over performance.
     """
-    def __init__(self, pads):
+    def __init__(self, pads, latency=6):
         self.pads = pads
         self.bus  = bus = wishbone.Interface()
 
@@ -77,12 +77,17 @@ class HyperRAM(Module):
             ca[0].eq(0),                      # Lower Column Address
         ]
 
+        # Latency count starts from the middle of the command (it's where -4 comes from).
+        # In fixed latency mode (default) latency is 2*Latency count.
+        # Because we have 4 sys clocks per ram clock:
+        lat = (latency * 8) - 4
+
         # Sequencer --------------------------------------------------------------------------------
         dt_seq = [
             # DT,  Action
             (3,    []),
             (12,   [cs.eq(1), dq.oe.eq(1), sr.eq(ca)]),    # Command: 6 clk
-            (44,   [dq.oe.eq(0)]),                         # Latency(default): 2*6 clk
+            (lat,  [dq.oe.eq(0)]),                         # Latency
             (2,    [dq.oe.eq(self.bus.we),                 # Write/Read data byte: 2 clk
                     sr[:16].eq(0),
                     sr[16:].eq(self.bus.dat_w),
