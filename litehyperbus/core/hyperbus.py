@@ -134,15 +134,15 @@ class HyperRAM(Module):
                 (2,    [rwdso[0].eq(~bus.sel[0])]),    # Write/Read data byte: 2 clk
             ]
         if dw == 16:
-            dt_send += [
+            dt_seq += [
                 (2,    [dq.oe.eq(self.bus.we),         # Write/Read data byte: 2 clk
                         sr[:16].eq(0),
                         sr[16:].eq(self.bus.dat_w),
                         rwds.oe.eq(self.bus.we),
-                        rwdso[0].eq(~bus.sel[3]),
-                        rwdso[1].eq(~bus.sel[2])]),
-                (2,    [rwdso[0].eq(~bus.sel[1]),
-                        rwdso[1].eq(~bus.sel[0])]),    # Write/Read data byte: 2 clk
+                        rwdso[1].eq(~bus.sel[3]),
+                        rwdso[0].eq(~bus.sel[2])]),
+                (2,    [rwdso[1].eq(~bus.sel[1]),
+                        rwdso[0].eq(~bus.sel[0])]),    # Write/Read data byte: 2 clk
             ]
 
         # End.
