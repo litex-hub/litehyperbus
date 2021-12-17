@@ -23,7 +23,7 @@ class HyperRAM(Module):
 
     This core favors portability and ease of use over performance.
     """
-    def __init__(self, pads):
+    def __init__(self, pads, latency=6):
         self.pads = pads
         self.bus  = bus = wishbone.Interface()
 
@@ -33,9 +33,13 @@ class HyperRAM(Module):
         clk_phase = Signal(2)
         cs        = Signal()
         ca        = Signal(48)
+        ca_active = Signal()
         sr        = Signal(48)
         dq        = self.add_tristate(pads.dq) if not hasattr(pads.dq, "oe") else pads.dq
         rwds      = self.add_tristate(pads.rwds) if not hasattr(pads.rwds, "oe") else pads.rwds
+        dw        = len(pads.dq)
+
+        assert dw in [8, 16]
 
         # Drive rst_n, cs_n, clk from internal signals ---------------------------------------------
         if hasattr(pads, "rst_n"):
@@ -57,45 +61,96 @@ class HyperRAM(Module):
         self.sync += Case(clk_phase, cases)
 
         # Data Shift Register (for write and read) -------------------------------------------------
-        dqi = Signal(8)
-        self.sync += dqi.eq(dq.i) # Sample on 90° and 270°
-        cases = {}
-        cases[0] = sr.eq(Cat(dqi, sr[:-8])) # Shift on 0°
-        cases[2] = sr.eq(Cat(dqi, sr[:-8])) # Shift on 180°
-        self.sync += Case(clk_phase, cases)
+        dqi = Signal(dw)
+        self.sync += dqi.eq(dq.i)  # Sample on 90° and 270°
+        self.sync += [
+                If((clk_phase == 0) | (clk_phase == 2), # Shift on 0° and 180°
+                    # During Command-Address, only D[7:0] are used
+                    If(ca_active,
+                        sr.eq(Cat(dqi[:8], sr[:-8]))
+                    ).Else(
+                        sr.eq(Cat(dqi, sr[:-dw]))
+                    )
+                )
+        ]
         self.comb += [
-            bus.dat_r.eq(sr), # To Wisbone
-            dq.o.eq(sr[-8:]), # To HyperRAM
+            bus.dat_r.eq(sr),      # To Wisbone
+            If(ca_active,
+                dq.o.eq(sr[-8:]),  # To HyperRAM, 8-bits mode
+            ).Else(
+                dq.o.eq(sr[-dw:]), # To HyperRAM, 16-bits mode
+            )
         ]
 
         # Command generation -----------------------------------------------------------------------
         self.comb += [
             ca[47].eq(~self.bus.we),          # R/W#
             ca[45].eq(1),                     # Burst Type (Linear)
-            ca[16:35].eq(self.bus.adr[2:21]), # Row & Upper Column Address
-            ca[1:3].eq(self.bus.adr[0:2]),    # Lower Column Address
-            ca[0].eq(0),                      # Lower Column Address
         ]
 
+        if dw == 8:
+            self.comb += [
+                ca[16:35].eq(self.bus.adr[2:21]), # Row & Upper Column Address
+                ca[1:3].eq(self.bus.adr[0:2]),    # Lower Column Address
+                ca[0].eq(0),                      # Lower Column Address
+            ]
+        else:
+            self.comb += [
+                ca[16:35].eq(self.bus.adr[3:22]), # Row & Upper Column Address
+                ca[1:3].eq(self.bus.adr[1:3]),    # Lower Column Address
+                ca[0].eq(self.bus.adr[0]),        # Lower Column Address
+            ]
+
+        # Latency count starts from the middle of the command (it's where -4 comes from).
+        # In fixed latency mode (default), latency is 2*Latency count.
+        # Because we have 4 sys clocks per ram clock:
+        lat = (latency * 8) - 4
+
         # Sequencer --------------------------------------------------------------------------------
-        dt_seq = [
+        dt_seq_ca = [
             # DT,  Action
             (3,    []),
-            (12,   [cs.eq(1), dq.oe.eq(1), sr.eq(ca)]),    # Command: 6 clk
-            (44,   [dq.oe.eq(0)]),                         # Latency(default): 2*6 clk
-            (2,    [dq.oe.eq(self.bus.we),                 # Write/Read data byte: 2 clk
+            (12,   [cs.eq(1), dq.oe.eq(1), sr.eq(ca), ca_active.eq(1)]), # Command: 6 clk
+            (lat,  [dq.oe.eq(0), ca_active.eq(0)]),                      # Latency
+        ]
+
+        rwdso = Signal(2)
+        self.comb += rwds.o.eq(rwdso)
+
+        dt_send_data_8 = [
+            (2,    [dq.oe.eq(self.bus.we),         # Write/Read data byte: 2 clk
                     sr[:16].eq(0),
                     sr[16:].eq(self.bus.dat_w),
                     rwds.oe.eq(self.bus.we),
-                    rwds.o.eq(~bus.sel[3])]),
-            (2,    [rwds.o.eq(~bus.sel[2])]),              # Write/Read data byte: 2 clk
-            (2,    [rwds.o.eq(~bus.sel[1])]),              # Write/Read data byte: 2 clk
-            (2,    [rwds.o.eq(~bus.sel[0])]),              # Write/Read data byte: 2 clk
+                    rwdso[0].eq(~bus.sel[3])]),
+            (2,    [rwdso[0].eq(~bus.sel[2])]),    # Write/Read data byte: 2 clk
+            (2,    [rwdso[0].eq(~bus.sel[1])]),    # Write/Read data byte: 2 clk
+            (2,    [rwdso[0].eq(~bus.sel[0])]),    # Write/Read data byte: 2 clk
+        ]
+
+        dt_send_data_16 = [
+            (2,    [dq.oe.eq(self.bus.we),         # Write/Read data byte: 2 clk
+                    sr[:16].eq(0),
+                    sr[16:].eq(self.bus.dat_w),
+                    rwds.oe.eq(self.bus.we),
+                    rwdso[0].eq(~bus.sel[3]),
+                    rwdso[1].eq(~bus.sel[2])]),
+            (2,    [rwdso[0].eq(~bus.sel[1]),
+                    rwdso[1].eq(~bus.sel[0])]),    # Write/Read data byte: 2 clk
+        ]
+
+        dt_seq_end = [
             (2,    [cs.eq(0), rwds.oe.eq(0), dq.oe.eq(0)]),
             (1,    [bus.ack.eq(1)]),
             (1,    [bus.ack.eq(0)]),
-            (0,    []),
+            (0,    [])
         ]
+
+        if dw == 8:
+            dt_seq = dt_seq_ca + dt_send_data_8 + dt_seq_end
+        else:
+            dt_seq = dt_seq_ca + dt_send_data_16 + dt_seq_end
+
         # Convert delta-time sequencer to time sequencer
         t_seq = []
         t_seq_start = (clk_phase == 1)
