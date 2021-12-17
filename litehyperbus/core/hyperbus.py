@@ -2,7 +2,7 @@
 # This file is part of LiteHyperBus
 #
 # Copyright (c) 2019 Antti Lukats <antti.lukats@gmail.com>
-# Copyright (c) 2019 Florent Kermarrec <florent@enjoy-digital.fr>
+# Copyright (c) 2019-2021 Florent Kermarrec <florent@enjoy-digital.fr>
 # Copyright (c) 2021 Franck Jullien <franck.jullien@collshade.fr>
 # SPDX-License-Identifier: BSD-2-Clause
 
@@ -108,49 +108,51 @@ class HyperRAM(Module):
         lat = (latency * 8) - 4
 
         # Sequencer --------------------------------------------------------------------------------
-        dt_seq_ca = [
+
+        # Command.
+        # --------
+        dt_seq = [
             # DT,  Action
             (3,    []),
             (12,   [cs.eq(1), dq.oe.eq(1), sr.eq(ca), ca_active.eq(1)]), # Command: 6 clk
             (lat,  [dq.oe.eq(0), ca_active.eq(0)]),                      # Latency
         ]
 
+        # Write/Read.
+        # -----------
         rwdso = Signal(2)
         self.comb += rwds.o.eq(rwdso)
+        if dw == 8:
+            dt_seq += [
+                (2,    [dq.oe.eq(self.bus.we),         # Write/Read data byte: 2 clk
+                        sr[:16].eq(0),
+                        sr[16:].eq(self.bus.dat_w),
+                        rwds.oe.eq(self.bus.we),
+                        rwdso[0].eq(~bus.sel[3])]),
+                (2,    [rwdso[0].eq(~bus.sel[2])]),    # Write/Read data byte: 2 clk
+                (2,    [rwdso[0].eq(~bus.sel[1])]),    # Write/Read data byte: 2 clk
+                (2,    [rwdso[0].eq(~bus.sel[0])]),    # Write/Read data byte: 2 clk
+            ]
+        if dw == 16:
+            dt_send += [
+                (2,    [dq.oe.eq(self.bus.we),         # Write/Read data byte: 2 clk
+                        sr[:16].eq(0),
+                        sr[16:].eq(self.bus.dat_w),
+                        rwds.oe.eq(self.bus.we),
+                        rwdso[0].eq(~bus.sel[3]),
+                        rwdso[1].eq(~bus.sel[2])]),
+                (2,    [rwdso[0].eq(~bus.sel[1]),
+                        rwdso[1].eq(~bus.sel[0])]),    # Write/Read data byte: 2 clk
+            ]
 
-        dt_send_data_8 = [
-            (2,    [dq.oe.eq(self.bus.we),         # Write/Read data byte: 2 clk
-                    sr[:16].eq(0),
-                    sr[16:].eq(self.bus.dat_w),
-                    rwds.oe.eq(self.bus.we),
-                    rwdso[0].eq(~bus.sel[3])]),
-            (2,    [rwdso[0].eq(~bus.sel[2])]),    # Write/Read data byte: 2 clk
-            (2,    [rwdso[0].eq(~bus.sel[1])]),    # Write/Read data byte: 2 clk
-            (2,    [rwdso[0].eq(~bus.sel[0])]),    # Write/Read data byte: 2 clk
-        ]
-
-        dt_send_data_16 = [
-            (2,    [dq.oe.eq(self.bus.we),         # Write/Read data byte: 2 clk
-                    sr[:16].eq(0),
-                    sr[16:].eq(self.bus.dat_w),
-                    rwds.oe.eq(self.bus.we),
-                    rwdso[0].eq(~bus.sel[3]),
-                    rwdso[1].eq(~bus.sel[2])]),
-            (2,    [rwdso[0].eq(~bus.sel[1]),
-                    rwdso[1].eq(~bus.sel[0])]),    # Write/Read data byte: 2 clk
-        ]
-
-        dt_seq_end = [
+        # End.
+        # ----
+        dt_seq += [
             (2,    [cs.eq(0), rwds.oe.eq(0), dq.oe.eq(0)]),
             (1,    [bus.ack.eq(1)]),
             (1,    [bus.ack.eq(0)]),
             (0,    [])
         ]
-
-        if dw == 8:
-            dt_seq = dt_seq_ca + dt_send_data_8 + dt_seq_end
-        else:
-            dt_seq = dt_seq_ca + dt_send_data_16 + dt_seq_end
 
         # Convert delta-time sequencer to time sequencer
         t_seq = []
