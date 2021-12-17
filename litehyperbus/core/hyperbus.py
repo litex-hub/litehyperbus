@@ -3,6 +3,7 @@
 #
 # Copyright (c) 2019 Antti Lukats <antti.lukats@gmail.com>
 # Copyright (c) 2019 Florent Kermarrec <florent@enjoy-digital.fr>
+# Copyright (c) 2021 Franck Jullien <franck.jullien@collshade.fr>
 # SPDX-License-Identifier: BSD-2-Clause
 
 from migen import *
@@ -35,9 +36,9 @@ class HyperRAM(Module):
         ca        = Signal(48)
         ca_active = Signal()
         sr        = Signal(48)
-        dq        = self.add_tristate(pads.dq) if not hasattr(pads.dq, "oe") else pads.dq
+        dq        = self.add_tristate(pads.dq)   if not hasattr(pads.dq,   "oe") else pads.dq
         rwds      = self.add_tristate(pads.rwds) if not hasattr(pads.rwds, "oe") else pads.rwds
-        dw        = len(pads.dq)
+        dw        = len(pads.dq)                 if not hasattr(pads.dq,   "oe") else len(pads.dq.o)
 
         assert dw in [8, 16]
 
