@@ -91,15 +91,15 @@ class HyperRAM(Module):
 
         if dw == 8:
             self.comb += [
-                ca[16:35].eq(self.bus.adr[2:21]), # Row & Upper Column Address
-                ca[1:3].eq(self.bus.adr[0:2]),    # Lower Column Address
-                ca[0].eq(0),                      # Lower Column Address
+                ca[16:45].eq(self.bus.adr[2:]), # Row & Upper Column Address
+                ca[1:3].eq(self.bus.adr[0:]),   # Lower Column Address
+                ca[0].eq(0),                    # Lower Column Address
             ]
         else:
             self.comb += [
-                ca[16:35].eq(self.bus.adr[3:22]), # Row & Upper Column Address
-                ca[1:3].eq(self.bus.adr[1:3]),    # Lower Column Address
-                ca[0].eq(self.bus.adr[0]),        # Lower Column Address
+                ca[16:45].eq(self.bus.adr[3:]), # Row & Upper Column Address
+                ca[1:3].eq(self.bus.adr[1:]),   # Lower Column Address
+                ca[0].eq(self.bus.adr[0]),      # Lower Column Address
             ]
 
         # Latency count starts from the middle of the command (it's where -4 comes from).
