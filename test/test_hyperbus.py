@@ -57,20 +57,22 @@ class TestHyperBus(unittest.TestCase):
                 yield
 
         dut = HyperRAM(HyperRamPads())
-        run_simulation(dut, [fpga_gen(dut), hyperram_gen(dut)])
+        run_simulation(dut, [fpga_gen(dut), hyperram_gen(dut)], vcd_name="sim.vcd")
 
     def test_hyperram_read(self):
         def fpga_gen(dut):
             dat = yield from dut.bus.read(0x1234)
             self.assertEqual(dat, 0xdeadbeef)
+            dat = yield from dut.bus.read(0x1235)
+            self.assertEqual(dat, 0xcafefade)
 
         def hyperram_gen(dut):
-            clk     = "___--__--__--__--__--__--__--__--__--__--__--__--__--__--__--__--_______"
-            cs_n    = "--________________________________________________________________------"
-            dq_oe   = "__------------__________________________________________________________"
-            dq_o    = "00a000048d00000000000000000000000000000000000000000000000000000000000000"
-            dq_i    = "0000000000000000000000000000000000000000000000000000000000deadbeef000000"
-            rwds_oe = "________________________________________________________________________"
+            clk     = "___--__--__--__--__--__--__--__--__--__--__--__--__--__--__--__--__--__--__--__--_"
+            cs_n    = "--________________________________________________________________________________"
+            dq_oe   = "__------------____________________________________________________________________"
+            dq_o    = "00a000048d000000000000000000000000000000000000000000000000000000000000000000000000"
+            dq_i    = "0000000000000000000000000000000000000000000000000000000000deadbeefcafefade00000000"
+            rwds_oe = "__________________________________________________________________________________"
             for i in range(3):
                 yield
             for i in range(len(clk)):
@@ -83,4 +85,4 @@ class TestHyperBus(unittest.TestCase):
                 yield
 
         dut = HyperRAM(HyperRamPads())
-        run_simulation(dut, [fpga_gen(dut), hyperram_gen(dut)])
+        run_simulation(dut, [fpga_gen(dut), hyperram_gen(dut)], vcd_name="sim.vcd")
