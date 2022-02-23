@@ -18,11 +18,11 @@ class Pads: pass
 
 
 class HyperRamPads:
-    def __init__(self):
+    def __init__(self, dw=8):
         self.clk  = Signal()
         self.cs_n = Signal()
-        self.dq   = Record([("oe", 1), ("o", 8), ("i", 8)])
-        self.rwds = Record([("oe", 1), ("o", 1), ("i", 1)])
+        self.dq   = Record([("oe", 1), ("o", dw),     ("i", dw)])
+        self.rwds = Record([("oe", 1), ("o", dw//8),  ("i", dw//8)])
 
 
 class TestHyperBus(unittest.TestCase):
@@ -35,7 +35,7 @@ class TestHyperBus(unittest.TestCase):
 
     def test_hyperram_write(self):
         def fpga_gen(dut):
-            yield from dut.bus.write(0x1234, 0xdeadbeef)
+            yield from dut.bus.write(0x1234, 0xdeadbeef, sel=0b1001)
             yield
 
         def hyperram_gen(dut):
@@ -44,7 +44,7 @@ class TestHyperBus(unittest.TestCase):
             dq_oe   = "__------------____________________________________________--------______"
             dq_o    = "002000048d000000000000000000000000000000000000000000000000deadbeef000000"
             rwds_oe = "__________________________________________________________--------______"
-            rwds_o  = "________________________________________________________________________"
+            rwds_o  = "____________________________________________________________----________"
             for i in range(3):
                 yield
             for i in range(len(clk)):

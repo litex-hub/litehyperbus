@@ -162,7 +162,7 @@ class HyperRAM(Module):
                 If(bus_we,
                     dq.oe.eq(1),
                     rwds.oe.eq(1),
-                    *[rwds.o[i].eq(~bus_sel[4-1-i-n]) for i in range(dw//8)],
+                    *[rwds.o[dw//8-1-i].eq(~bus_sel[4-1-n*dw//8-i]) for i in range(dw//8)],
                 ),
                 # Wait for 2 cycles (since HyperRAM's Clk = sys_clk/4).
                 If(cycles == (2 - 1),
