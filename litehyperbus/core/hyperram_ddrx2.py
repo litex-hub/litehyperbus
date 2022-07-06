@@ -34,7 +34,8 @@ class HyperRAMX2(Module):
      - Handle variable latency writes
      - Add Litex automated tests
     """
-    def __init__(self, pads, latency = 6):
+    def __init__(self, pads, latency = 6, cr0_preset = None,
+                 cr1_preset = None, dual_die_control = True):
         self.pads = pads
         self.bus  = bus = wishbone.Interface(adr_width=22)
 
@@ -59,6 +60,30 @@ class HyperRAMX2(Module):
             phy.dly_io.eq(self.dly_io),
             phy.dly_clk.eq(self.dly_clk),
         ]
+
+        # CR0/CR1 preset ---------------------------------------------------------------------------
+        preset_cr = True
+        multi_cr = False
+        die_address = Signal()
+        cr_select = Signal()
+        cr_value = Signal(16)
+
+        if cr0_preset is not None and cr1_preset is not None:
+            multi_cr = True
+            self.comb += cr_value.eq(Mux(cr_select, cr1_preset, cr0_preset))
+        elif cr0_preset is not None:
+            self.comb += [
+                cr_value.eq(cr0_preset),
+                cr_select.eq(0)
+            ]
+        elif cr1_preset is not None:
+            self.comb += [
+                cr_value.eq(cr1_preset),
+                cr_select.eq(1)
+            ]
+        else:
+            preset_cr = False
+
 
         # Drive rst_n, from internal signals -------------------------------------------------------
         if hasattr(pads, "rst_n"):
@@ -94,7 +119,7 @@ class HyperRAMX2(Module):
         ]
 
         # FSM Sequencer ----------------------------------------------------------------------------
-        self.submodules.fsm = fsm = FSM(reset_state="IDLE")
+        self.submodules.fsm = fsm = FSM(reset_state="WRITE-CR" if preset_cr else "IDLE")
         fsm.act("IDLE",
             If(bus.cyc & bus.stb,
                 NextValue(cs, 1),
@@ -170,6 +195,41 @@ class HyperRAMX2(Module):
             NextState("WAIT")
         )
         fsm.delayed_enter("WAIT", "IDLE", 10)
+
+        if preset_cr:
+            fsm.act("WRITE-CR",
+                NextValue(cs, 1),
+                NextValue(phy.rwds.oe, 0),
+                NextState("CR-CA-SEND")
+            )
+            fsm.act("CR-CA-SEND",
+                NextValue(clk, 1),
+                NextValue(phy.dq.oe, 1),
+                NextValue(sr_out, Cat(cr_value, cr_select, C(0, 23),
+                                      C(1, 11), die_address, C(0x600, 12))),
+                NextState("CR-CA-WAIT")
+            )
+            fsm.act("CR-CA-WAIT",
+                NextState("WRITE-CR-CLK-OFF")
+            )
+            fsm.act("WRITE-CR-CLK-OFF",
+                NextValue(clk, 0),
+                NextState("WRITE-CR-DONE")
+            )
+            fsm.act("WRITE-CR-DONE",
+                NextValue(cs, 0),
+                NextValue(phy.dq.oe, 0),
+                If((die_address if dual_die_control else 1) &
+                   (cr_select if multi_cr else 1),
+                    NextValue(cr_select, 0) if multi_cr else [],
+                    NextValue(die_address, 0),
+                    NextState("CLEANUP")
+                ).Else(
+                    NextValue(cr_select, ~cr_select) if multi_cr else [],
+                    NextValue(die_address, die_address|cr_select if multi_cr else 1),
+                    NextState("WRITE-CR")
+                )
+            )
 
         # Debug signals (for LiteScope/ILA obervation) ---------------------------------------------
         self.dbg = [
