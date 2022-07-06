@@ -87,7 +87,8 @@ class HyperRAMX2(Module):
         self.comb += [
             ca[47].eq(~self.bus.we),          # R/W#
             ca[45].eq(1),                     # Burst Type (Linear)
-            ca[16:35].eq(self.bus.adr[2:21]), # Row & Upper Column Address
+            ca[16:14+self.bus.adr_width].eq(
+                self.bus.adr[2:]),            # Row & Upper Column Address
             ca[1:3].eq(self.bus.adr[0:2]),    # Lower Column Address
             ca[0].eq(0),                      # Lower Column Address
         ]
